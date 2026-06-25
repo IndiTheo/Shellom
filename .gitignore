@@ -1,0 +1,67 @@
+# =================================
+# IDE & EDITOR CONFIGURATIONS
+# =================================
+
+# --- JetBrains / IntelliJ / Android Studio ---
+.idea/
+.idea_modules/
+*.iml
+out/
+**/out/
+local.properties
+
+# --- Android Studio with Bazel (ASwB) ---
+.aswb/
+
+# --- VS Code ---
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+
+# --- Eclipse Theia ---
+.theia/*
+!.theia/launch.json
+!.theia/tasks.json
+!.theia/settings.json
+
+# --- Eclipse ---
+.eclipse
+.metadata/
+.project
+.classpath
+.settings/
+*.launch
+.factorypath
+.externalToolBuilders/
+
+# =================================
+# JVM & BUILD ARTIFACTS
+# =================================
+
+# --- Compiled Artifacts ---
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+
+# --- Kotlin ---
+.kotlin/
+
+# --- Gradle ---
+.gradle/
+build/
+
+# --- Gradle Wrapper ---
+gradlew
+gradlew.bat
+gradle/wrapper/
+
+# =================================
+# ENVIRONMENT & TOOLING
+# =================================
+
+# --- Mise ---
+.mise.local.toml
+.mise.secrets.toml

@@ -1,0 +1,106 @@
+---
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true"
+  GRADLE_USER_HOME: "${CI_PROJECT_DIR}/.gradle"
+  CI_BASE_IMAGE: "$CI_REGISTRY_IMAGE:latest"
+
+default:
+  interruptible: true
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+stages:
+  - infra
+  - lint
+  - build
+  - publish
+
+# Base CI Image
+build_ci_base_image:
+  stage: infra
+  image: quay.io/buildah/stable:v1.35.4
+  rules:
+    - changes:
+        - Dockerfile
+        - .mise.toml
+  script:
+    - buildah login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - buildah build -t $CI_BASE_IMAGE .
+    - buildah push $CI_BASE_IMAGE
+
+# Cache runtime deps
+cache:
+  key:
+    files:
+      - build.gradle.kts
+  paths:
+    - .gradle/caches
+
+lint_commit:
+  stage: lint
+  image: node:alpine
+  cache: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - npm install -g @commitlint/cli @commitlint/config-conventional
+    - |
+      if [ ! -f commitlint.config.js ]; then
+        echo "module.exports = { extends: ['@commitlint/config-conventional'] };" > commitlint.config.js
+      fi
+  script:
+    - echo "${CI_MERGE_REQUEST_TITLE}" | commitlint
+
+lint_code:
+  stage: lint
+  image: $CI_BASE_IMAGE
+  before_script:
+    - eval "$(mise activate bash)"
+  script:
+    - gradle ktlintCheck
+
+build_library:
+  stage: build
+  image: $CI_BASE_IMAGE
+  before_script:
+    - eval "$(mise activate bash)"
+  script:
+    - gradle assembleRelease
+  artifacts:
+    paths:
+      - "**/build/outputs/aar/*.aar"
+    expire_in: 1 week
+
+publish_local:
+  stage: publish
+  image: $CI_BASE_IMAGE
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    - eval "$(mise activate bash)"
+  script:
+    - export VERSION=$(grep 'VERSION_NAME' gradle.properties | cut -d'=' -f2)
+    - export ORG_GRADLE_PROJECT_VERSION_NAME="${VERSION}-${CI_COMMIT_SHORT_SHA}"
+    - export ORG_GRADLE_PROJECT_PROJECT_URL="${CI_PROJECT_URL}"
+    - export ORG_GRADLE_PROJECT_INTERNAL_REPO_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven"
+    - export ORG_GRADLE_PROJECT_INTERNAL_REPO_USERNAME="gitlab-ci-token"
+    - export ORG_GRADLE_PROJECT_INTERNAL_REPO_PASSWORD="${CI_JOB_TOKEN}"
+    - gradle publish
+
+publish_maven:
+  stage: publish
+  image: $CI_BASE_IMAGE
+  rules:
+    - if: $CI_COMMIT_TAG
+  before_script:
+    - eval "$(mise activate bash)"
+  script:
+    - export ORG_GRADLE_PROJECT_PROJECT_URL="${CI_PROJECT_URL}"
+    - export ORG_GRADLE_PROJECT_VERSION_NAME="${CI_COMMIT_TAG}"
+    - export ORG_GRADLE_PROJECT_SONATYPE_HOST="CENTRAL_PORTAL"
+    - gradle publish
+  when: manual
