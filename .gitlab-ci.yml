@@ -1,106 +1,37 @@
----
-variables:
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true"
-  GRADLE_USER_HOME: "${CI_PROJECT_DIR}/.gradle"
-  CI_BASE_IMAGE: "$CI_REGISTRY_IMAGE:latest"
-
-default:
-  interruptible: true
-
-workflow:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_TAG
-
-stages:
-  - infra
-  - lint
-  - build
-  - publish
-
-# Base CI Image
-build_ci_base_image:
-  stage: infra
-  image: quay.io/buildah/stable:v1.35.4
-  rules:
-    - changes:
-        - Dockerfile
-        - .mise.toml
+inject_pgp_secrets_to_vault:
+  stage: deploy
+  image: $CI_BASE_IMAGE
+  rules: [{if: '$CI_PIPELINE_SOURCE == "web"'}]
+  variables:
+    REAL_NAME: "IndiDevs Shellom Automated Pipeline"
+    EMAIL: "automated-release-signer@indidevs.com"
+    PROJECT_COMMENT: "IndiDevs Project"
   script:
-    - buildah login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - buildah build -t $CI_BASE_IMAGE .
-    - buildah push $CI_BASE_IMAGE
-
-# Cache runtime deps
-cache:
-  key:
-    files:
-      - build.gradle.kts
-  paths:
-    - .gradle/caches
-
-lint_commit:
-  stage: lint
-  image: node:alpine
-  cache: []
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  before_script:
-    - npm install -g @commitlint/cli @commitlint/config-conventional
     - |
-      if [ ! -f commitlint.config.js ]; then
-        echo "module.exports = { extends: ['@commitlint/config-conventional'] };" > commitlint.config.js
-      fi
-  script:
-    - echo "${CI_MERGE_REQUEST_TITLE}" | commitlint
-
-lint_code:
-  stage: lint
-  image: $CI_BASE_IMAGE
-  before_script:
-    - eval "$(mise activate bash)"
-  script:
-    - gradle ktlintCheck
-
-build_library:
-  stage: build
-  image: $CI_BASE_IMAGE
-  before_script:
-    - eval "$(mise activate bash)"
-  script:
-    - gradle assembleRelease
-  artifacts:
-    paths:
-      - "**/build/outputs/aar/*.aar"
-    expire_in: 1 week
-
-publish_local:
-  stage: publish
-  image: $CI_BASE_IMAGE
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  before_script:
-    - eval "$(mise activate bash)"
-  script:
-    - export VERSION=$(grep 'VERSION_NAME' gradle.properties | cut -d'=' -f2)
-    - export ORG_GRADLE_PROJECT_VERSION_NAME="${VERSION}-${CI_COMMIT_SHORT_SHA}"
-    - export ORG_GRADLE_PROJECT_PROJECT_URL="${CI_PROJECT_URL}"
-    - export ORG_GRADLE_PROJECT_INTERNAL_REPO_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven"
-    - export ORG_GRADLE_PROJECT_INTERNAL_REPO_USERNAME="gitlab-ci-token"
-    - export ORG_GRADLE_PROJECT_INTERNAL_REPO_PASSWORD="${CI_JOB_TOKEN}"
-    - gradle publish
-
-publish_maven:
-  stage: publish
-  image: $CI_BASE_IMAGE
-  rules:
-    - if: $CI_COMMIT_TAG
-  before_script:
-    - eval "$(mise activate bash)"
-  script:
-    - export ORG_GRADLE_PROJECT_PROJECT_URL="${CI_PROJECT_URL}"
-    - export ORG_GRADLE_PROJECT_VERSION_NAME="${CI_COMMIT_TAG}"
-    - export ORG_GRADLE_PROJECT_SONATYPE_HOST="CENTRAL_PORTAL"
-    - gradle publish
-  when: manual
+      [ -z "$GPG_PASSPHRASE" ] || [ ${#GPG_PASSPHRASE} -lt 8 ] && exit 1
+      apt-get update -yq && apt-get install -yq gnupg curl >/dev/null || apk add --no-cache gnupg curl >/dev/null
+      
+      gpg --batch --generate-key <<EOF
+      Key-Type: RSA
+      Key-Length: 4096
+      Name-Real: $REAL_NAME
+      Name-Email: $EMAIL
+      Name-Comment: $PROJECT_COMMENT
+      Passphrase: $GPG_PASSPHRASE
+      %commit
+      EOF
+      
+      KID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ {print $5}')
+      GPG_PUBLIC_KEY=$(gpg --armor --export $KID | base64 -w0 | tr -d '=')
+      GPG_SECRET_KEY=$(gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --armor --export-secret-keys $KID | base64 -w0 | tr -d '=')
+      gpg --keyserver hkps://keyserver.ubuntu.com --send-keys $KID >/dev/null 2>&1
+      
+      for K in GPG_PUBLIC_KEY GPG_SECRET_KEY GPG_PASSPHRASE; do
+        VAL=$(eval echo "\$$K")
+        curl -s -f -X PUT -H "PRIVATE-TOKEN: $PROJECT_API_TOKEN" \
+          --form "value=$VAL" --form "protected=true" --form "masked_and_hidden=true" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/variables/$K" >/dev/null 2>&1 || \
+        curl -s -f -X POST -H "PRIVATE-TOKEN: $PROJECT_API_TOKEN" \
+          --form "key=$K" --form "value=$VAL" --form "protected=true" --form "masked_and_hidden=true" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/variables" >/dev/null 2>&1
+      done
