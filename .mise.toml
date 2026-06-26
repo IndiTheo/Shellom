@@ -1,6 +1,0 @@
-[tools]
-gradle = "9.4.1"
-java = "17"
-
-# 2. Check system for Android SDK first. Fallback to 'latest' if missing.
-android-sdk = ["system", "latest"]
