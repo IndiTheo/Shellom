@@ -9,7 +9,7 @@ inject_pgp_secrets_to_vault:
   script:
     - |
       [ -z "$GPG_PASSPHRASE" ] || [ ${#GPG_PASSPHRASE} -lt 8 ] && exit 1
-      GPG_PASSPHRASE=$(echo -n "$GPG_PASSPHRASE" | base64 -w0 | tr -d '=')
+      GPG_PASSPHRASE=$(echo -n "$GPG_PASSPHRASE" | base64 -w0)
       apt-get update -yq && apt-get install -yq gnupg curl >/dev/null || apk add --no-cache gnupg curl >/dev/null
       
       gpg --batch --generate-key <<EOF
@@ -23,8 +23,8 @@ inject_pgp_secrets_to_vault:
       EOF
       
       KID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ {print $5}')
-      GPG_PUBLIC_KEY=$(gpg --armor --export $KID | base64 -w0 | tr -d '=')
-      GPG_SECRET_KEY=$(gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --armor --export-secret-keys $KID | base64 -w0 | tr -d '=')
+      GPG_PUBLIC_KEY=$(gpg --armor --export $KID | base64 -w0)
+      GPG_SECRET_KEY=$(gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --armor --export-secret-keys $KID | base64 -w0)
       gpg --keyserver hkps://keyserver.ubuntu.com --send-keys $KID >/dev/null 2>&1
       
       curl -s -f -X PUT -H "PRIVATE-TOKEN: $PROJECT_API_TOKEN" \
