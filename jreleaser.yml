@@ -1,0 +1,43 @@
+project:
+  name: shellom
+  description: "Shell identity elevation for Android apps."
+  longDescription: "Shell identity elevation for Android apps."
+  authors:
+    - IndiDevs
+    - IndiTheo
+  license: MIT
+  links:
+    homepage: "https://gitlab.com/IndiDevs/shellom"
+  languages:
+    java:
+      groupId: com.indidevs.android
+      artifactId: shellom
+
+signing:
+  active: ALWAYS
+  pgp:
+    armored: true
+    mode: MEMORY
+
+deploy:
+  maven:
+    mavenCentral:
+      sonatype:
+        active: RELEASE
+        url: https://central.sonatype.com/api/v1/publisher
+        stagingRepositories:
+          - "build/staging-deploy"
+        # Disables static POM verification for Android AAR
+        verifyPom: false
+    nexus2:
+      sonatype-snapshot:
+        active: SNAPSHOT
+        snapshotUrl: https://central.sonatype.com/repository/maven-snapshots/
+        applyMavenCentralRules: true
+        snapshotSupported: true
+        closeRepository: true
+        releaseRepository: true
+        stagingRepositories:
+          - "build/staging-deploy"
+        # Disables static POM verification for Android AAR
+        verifyPom: false

@@ -1,6 +1,6 @@
 FROM ubuntu:24.04
 
-RUN apt-get update && apt-get install -y curl git unzip
+RUN apt-get update && apt-get install -y curl git unzip ca-certificates
 
 RUN curl https://mise.run | sh
 ENV PATH="/root/.local/bin:$PATH"

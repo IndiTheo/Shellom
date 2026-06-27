@@ -44,17 +44,6 @@ dependencies {
 val internalRepoUrl = project.findProperty("INTERNAL_REPO_URL")?.toString()
 
 mavenPublishing {
-    if (internalRepoUrl.isNullOrBlank()) {
-        publishToMavenCentral()
-
-        // Only sign if keys are provided or if explicitly requested via -PsignAllPublications=true
-        if (project.hasProperty("signing.keyId") ||
-            project.findProperty("signAllPublications") == "true"
-        ) {
-            signAllPublications()
-        }
-    }
-
     val versionName = project.findProperty("VERSION_NAME")?.toString()
         ?: throw GradleException(
             "VERSION_NAME property is required for publishing." +
@@ -84,16 +73,25 @@ mavenPublishing {
 
         licenses {
             license {
-                name.set("The Apache License, Version 2.0")
-                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                name.set("The MIT License")
+                url.set("https://opensource.org/licenses/MIT")
             }
         }
         developers {
             developer {
                 id.set("indidevs")
                 name.set("IndiDevs")
-                email.set("contact@indidevs.com")
+                email.set("incoming+indidevs-shellom-83615814-issue-@incoming.gitlab.com")
             }
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "staging"
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
