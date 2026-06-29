@@ -8,6 +8,39 @@ Shellom allows an Android app to adopt privileged shell (ADB) permissions at run
 - **Android 12+ (API 31)**: Required for `--no-restart` instrumentation.
 - **ADB Connection**: Required to trigger the elevation command.
 
+## 📦 Add Dependency
+
+[![Maven Central](https://img.shields.io/maven-central/v/com.indidevs.android/shellom)](https://central.sonatype.com/artifact/com.indidevs.android/shellom)
+
+### Maven
+```xml
+<dependency>
+  <groupId>com.indidevs.android</groupId>
+  <artifactId>shellom</artifactId>
+  <version>LATEST_VERSION</version>
+  <type>aar</type>
+</dependency>
+```
+
+### Gradle
+```kotlin
+dependencies {
+    implementation("com.indidevs.android:shellom:0.1.0")
+}
+```
+
+### Bazel
+```python
+maven_install(
+    artifacts = [
+        "com.indidevs.android:shellom:LATEST_VERSION",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+)
+```
+
 ## Usage
 
 ### Register Runner (`AndroidManifest.xml`)
@@ -77,10 +110,3 @@ val provider = InstrumentationShellProvider(..., runnerClass = "com.myapp.MyRunn
 ```
 
 ---
-
-## 📦 Installation
-```kotlin
-dependencies {
-    implementation("com.indidevs.android:shellom:0.1.0")
-}
-```
