@@ -4,6 +4,7 @@ import android.os.Process
 import android.util.Log
 import androidx.annotation.Keep
 import androidx.test.platform.app.InstrumentationRegistry
+import com.indidevs.android.shellom.SignalReady
 import java.util.concurrent.CountDownLatch
 import org.junit.Test
 
@@ -62,7 +63,7 @@ class ShellIdentityElevator {
         }
 
         // Signal readiness back to the Provider in the app process
-        ShellElevationSignal.signalReady()
+        SignalReady.signalReady()
 
         // Keep the instrumentation alive to maintain the adopted permissions
         Log.d(TAG, "Elevation successful. Holding process identity...")

@@ -3,7 +3,6 @@ package com.indidevs.android.shellom
 import android.content.Context
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
-import com.indidevs.android.shellom.instrumentation.ShellElevationSignal
 import com.indidevs.android.shellom.instrumentation.ShellIdentityElevator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,19 +31,19 @@ class InstrumentationShellProvider(
     }
 
     override suspend fun performElevation(): Context {
-        if (!ShellElevationSignal.isReady.isCompleted) {
+        if (!SignalReady.isReady.isCompleted) {
             triggerElevation()
         }
 
         Log.d(TAG, "Waiting for Shell readiness signal...")
-        ShellElevationSignal.isReady.await()
+        SignalReady.isReady.await()
         Log.i(TAG, "Privileged context acquired via InstrumentationRegistry")
 
         return InstrumentationRegistry.getInstrumentation().context
     }
 
     override fun onReset() {
-        ShellElevationSignal.reset()
+        SignalReady.reset()
     }
 
     /**
@@ -52,7 +51,7 @@ class InstrumentationShellProvider(
      *
      * @return The raw shell command string to be executed via ADB.
      */
-    fun buildElevationCommand(): String {
+    internal fun buildElevationCommand(): String {
         val packageName = context.packageName
         val testClass = ShellIdentityElevator::class.java.name
         val permissions = requiredPermissions.joinToString(",")
@@ -76,6 +75,7 @@ class InstrumentationShellProvider(
             executor.execute(cmd).onFailure { e ->
                 Log.e(TAG, "Failed to execute elevation command", e)
                 updateStatus(ShellStatus.ERROR)
+                SignalReady.isReady.completeExceptionally(e)
             }
         }
     }
