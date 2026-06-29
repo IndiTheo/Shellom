@@ -1,16 +1,12 @@
-package com.indidevs.android.shellom.instrumentation
+package com.indidevs.android.shellom
 
 import kotlinx.coroutines.CompletableDeferred
 
 /**
- * Internal signaling mechanism to communicate between the Instrumentation thread
- * and the Application process.
- *
- * Since the instrumentation runs in the same process but on a different thread
- * and lifecycle, this object provides a way for the [com.indidevs.android.shellom.InstrumentationShellProvider]
- * to wait for [ShellIdentityElevator] to complete its work.
+ * Internal signaling mechanism to communicate readiness between different threads
+ * or components within the same process.
  */
-internal object ShellElevationSignal {
+internal object SignalReady {
     /**
      * A deferred value that completes when the shell identity has been successfully adopted.
      */
