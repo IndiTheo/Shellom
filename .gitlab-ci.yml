@@ -77,25 +77,33 @@ build_library:
       - "**/build/outputs/aar/*.aar"
     expire_in: 1 week
 
-publish_local:
+publish_internal:
   stage: publish
   image: $CI_BASE_IMAGE
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$/
   before_script:
     - eval "$(mise activate bash)"
   script:
-    - export VERSION=$(grep 'VERSION_NAME' gradle.properties | cut -d'=' -f2)
-    - export ORG_GRADLE_PROJECT_VERSION_NAME="${VERSION}-${CI_COMMIT_SHORT_SHA}"
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        export VERSION_NAME="${CI_COMMIT_TAG#v}"
+      else
+        export BASE_VERSION=$(grep 'VERSION_NAME' gradle.properties | cut -d'=' -f2)
+        export VERSION_NAME="${BASE_VERSION}-${CI_COMMIT_SHORT_SHA}"
+      fi
+    - export ORG_GRADLE_PROJECT_VERSION_NAME="${VERSION_NAME}"
     - export ORG_GRADLE_PROJECT_PROJECT_URL="${CI_PROJECT_URL}"
     - export ORG_GRADLE_PROJECT_INTERNAL_REPO_URL="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/maven"
     - export ORG_GRADLE_PROJECT_INTERNAL_REPO_USERNAME="gitlab-ci-token"
     - export ORG_GRADLE_PROJECT_INTERNAL_REPO_PASSWORD="${CI_JOB_TOKEN}"
-    - gradle publish
+    - gradle publishAllPublicationsToInternalRepository
 
 stage_maven:
   stage: publish
   image: $CI_BASE_IMAGE
+  needs: [ publish_internal ]
   rules:
     - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$/
   before_script:
@@ -114,7 +122,8 @@ publish_maven:
   image: jreleaser/jreleaser-slim:v1.24.0
   needs: [ stage_maven ]
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$/
+      when: manual
   variables:
     JRELEASER_GPG_PUBLIC_KEY: "$GPG_PUBLIC_KEY"
     JRELEASER_GPG_SECRET_KEY: "$GPG_SECRET_KEY"
