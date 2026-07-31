@@ -9,7 +9,7 @@ This way, it's possible to use privileged system service wrappers without any ha
 
 - No reflection
 - No AIDL communication
-- No manuall switching of binder references
+- No manual switching of binder references
 
 Shellom! can be used to launch regular Android Services that can directly run privileged code, without the need to
 imitate headless AIDL services. Shellom! uses the [instrumentation testing framework](https://source.android.com/docs/core/tests/development/instrumentation) to adopt debugger permissions for the desired app.
