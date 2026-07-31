@@ -1,7 +1,13 @@
 project:
   name: shellom
-  description: "Shell identity elevation for Android apps."
-  longDescription: "Shell identity elevation for Android apps."
+  description: >
+    Shell identity elevation for Android apps.
+  longDescription: >
+    Shellom! leverages the Android instrumentation framework to elevate your application's
+    process to the Shell (UID 2000) identity at runtime. It provides direct, ADB-level
+    permissions without requiring root access, external sidecar processes, or the complexity
+    of AIDL bridges. This in-process elevation allows for seamless, low-latency interaction
+    with privileged system services and adapters.
   authors:
     - IndiDevs
     - IndiTheo
