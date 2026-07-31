@@ -2,7 +2,17 @@
 
 **Elevation to shell identity for Android apps.**
 
-Shellom allows an Android app to adopt privileged shell (ADB) permissions at runtime, no root required.
+Shellom! is a novel approach to adopting privileged shell (ADB) permissions at runtime, no root required.
+Unlike implementations that spawn a separate app process, Shellom! utilizes an ADB session provided
+to it to elevate the main process of the application to user 2000's identity.
+This way, it's possible to use privileged system service wrappers without any hassle:
+
+- No reflection
+- No AIDL communication
+- No manuall switching of binder references
+
+Shellom! can be used to launch regular Android Services that can directly run privileged code, without the need to
+imitate headless AIDL services. Shellom! uses the [instrumentation testing framework](https://source.android.com/docs/core/tests/development/instrumentation) to adopt debugger permissions for the desired app.
 
 ## Requirements
 - **Android 12+ (API 31)**: Required for `--no-restart` instrumentation.
@@ -25,7 +35,7 @@ Shellom allows an Android app to adopt privileged shell (ADB) permissions at run
 ### Gradle
 ```kotlin
 dependencies {
-    implementation("com.indidevs.android:shellom:0.1.0")
+    implementation("com.indidevs.android:shellom:LATEST_VERSION")
 }
 ```
 
@@ -81,7 +91,7 @@ val provider = InstrumentationShellProvider(context, scope, executor, listOf(
 val privilegedContext = provider.awaitContext() 
 ```
 
-### Monitoring Status
+### Monitor
 Monitor the elevation lifecycle (`IDLE`, `ELEVATING`, `READY`, `ERROR`) via the `status` StateFlow or the `observeStatus` helper.
 
 ```kotlin
@@ -95,7 +105,7 @@ provider.observeStatus(lifecycleScope) { status ->
 }
 ```
 
-### Resetting
+### Reset
 To clear the cached privileged context and allow a fresh elevation attempt:
 ```kotlin
 provider.reset()
