@@ -74,7 +74,14 @@ abstract class AbstractShellProvider : ShellProvider {
     }
 
     override suspend fun awaitContext(): Context = mutex.withLock {
-        cachedContext?.let { return it }
+        cachedContext?.let {
+            if (_status.value != ShellStatus.READY) updateStatus(ShellStatus.READY)
+            return it
+        }
+
+        if (_status.value == ShellStatus.ERROR) {
+            reset()
+        }
 
         updateStatus(ShellStatus.ELEVATING)
 
