@@ -7,5 +7,4 @@ ENV PATH="/root/.local/bin:$PATH"
 
 COPY .mise.toml .
 
-RUN mise install \
-    && yes | mise exec -- sdkmanager --licenses || true
+RUN mise install
