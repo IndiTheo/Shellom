@@ -13,7 +13,7 @@ import androidx.test.runner.AndroidJUnitRunner
  * While [AndroidJUnitRunner] can be used directly, this class provides better
  * logging for the elevation lifecycle.
  */
-class ShellRunner : AndroidJUnitRunner() {
+open class ShellRunner : AndroidJUnitRunner() {
     override fun onCreate(arguments: Bundle?) {
         Log.i("ShellRunner", "ShellRunner created")
         super.onCreate(arguments)
