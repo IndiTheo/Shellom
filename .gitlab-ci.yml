@@ -139,3 +139,9 @@ publish_maven:
     - export JRELEASER_NEXUS2_SONATYPE_SNAPSHOT_USERNAME="${JRELEASER_MAVENCENTRAL_USERNAME}"
     - export JRELEASER_NEXUS2_SONATYPE_SNAPSHOT_PASSWORD="${JRELEASER_MAVENCENTRAL_PASSWORD}"
     - JRELEASER_MAVENCENTRAL_STAGE=UPLOAD jreleaser deploy
+  artifacts:
+    when: on_failure
+    access: maintainer
+    expire_in: 1 day
+    paths:
+      - out/jreleaser/trace.log
