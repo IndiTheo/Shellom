@@ -1,5 +1,4 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
 
 buildscript {
     repositories {
@@ -13,6 +12,7 @@ buildscript {
 
 plugins {
     id("com.android.library")
+    id("org.jetbrains.kotlin.android") apply false
     id("org.jlleitschuh.gradle.ktlint")
     id("com.vanniktech.maven.publish")
 }
@@ -32,10 +32,16 @@ android {
     }
 }
 
-tasks.withType<KotlinCompile>().configureEach {
+kotlin {
     compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
+        languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
+        apiVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2)
     }
+}
+
+configure<KtlintExtension> {
+    android.set(true)
+    ignoreFailures.set(true)
 }
 
 dependencies {

@@ -26,3 +26,11 @@ To automatically fix most linting issues, run:
 ```bash
 gradle ktlintFormat
 ```
+
+## Testing & Test App
+
+To build, install, and test the companion test app module (`:test-app`):
+
+```bash
+gradle :test-app:installDebug
+```

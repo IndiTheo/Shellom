@@ -79,6 +79,28 @@ build_library:
       - "**/build/outputs/aar/*.aar"
     expire_in: 1 week
 
+build_test_app:
+  stage: build
+  image: $CI_BASE_IMAGE
+  rules:
+    - changes:
+        - src/**/*
+        - test-app/**/*
+        - test-app/build.gradle.kts
+        - build.gradle.kts
+        - settings.gradle.kts
+        - gradle.properties
+        - .gitlab-ci.yml
+  before_script:
+    - eval "$(mise activate bash)"
+    - mise exec -- sdkmanager --update || true
+  script:
+    - gradle :test-app:assembleRelease
+  artifacts:
+    paths:
+      - "test-app/build/outputs/apk/release/*.apk"
+    expire_in: 1 week
+
 publish_internal:
   stage: publish
   image: $CI_BASE_IMAGE
