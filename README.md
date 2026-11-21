@@ -19,7 +19,7 @@ imitate headless AIDL services. Shellom! uses the [instrumentation testing frame
 - **ADB Connection**: Required to trigger the elevation command.
 
 > [!TIP]
-> Any ADB transport works ass Shellom! only needs a `ShellExecutor`.
+> Any ADB transport works as Shellom! only needs a `ShellExecutor`.
 > See [Integrations](#Integrations) for pre-made ADB executors.
 
 ## 📦 Add Dependency
