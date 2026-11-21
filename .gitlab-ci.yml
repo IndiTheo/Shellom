@@ -60,6 +60,8 @@ lint_code:
   rules:
     - changes:
         - src/**/*
+        - test-app/**/*
+        - .gitlab-ci.yml
   before_script:
     - eval "$(mise activate bash)"
     - mise exec -- sdkmanager --update || true
@@ -69,6 +71,13 @@ lint_code:
 build_library:
   stage: build
   image: $CI_BASE_IMAGE
+  rules:
+    - changes:
+        - src/**/*
+        - build.gradle.kts
+        - settings.gradle.kts
+        - gradle.properties
+        - .gitlab-ci.yml
   before_script:
     - eval "$(mise activate bash)"
     - mise exec -- sdkmanager --update || true
