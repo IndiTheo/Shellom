@@ -1,5 +1,5 @@
 [tools]
-gradle = "9.4.1"
+gradle = "9.6.0"
 java = "17"
 
 # 2. Check system for Android SDK first. Fallback to 'latest' if missing.

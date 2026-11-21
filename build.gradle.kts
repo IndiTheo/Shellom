@@ -1,6 +1,16 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21")
+    }
+}
+
 plugins {
     id("com.android.library")
     id("org.jlleitschuh.gradle.ktlint")
@@ -33,6 +43,9 @@ dependencies {
     implementation("androidx.annotation:annotation:1.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+
+    // Integrations
+    compileOnly("com.indidevs.android:adbeesh:0.1.0-beta-2")
 
     // Instrumentation
     implementation("androidx.test:runner:1.7.0")

@@ -7,7 +7,9 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("com.android.library") version "9.2.1"
+        id("com.android.application") version "9.5.2"
+        id("com.android.library") version "9.5.2"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.4.21"
         id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
         id("com.vanniktech.maven.publish") version "0.37.0"
     }
@@ -18,5 +20,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
+        maven("https://jitpack.io")
     }
 }

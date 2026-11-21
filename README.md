@@ -18,6 +18,10 @@ imitate headless AIDL services. Shellom! uses the [instrumentation testing frame
 - **Android 12+ (API 31)**: Required for `--no-restart` instrumentation.
 - **ADB Connection**: Required to trigger the elevation command.
 
+> [!TIP]
+> Any ADB transport works ass Shellom! only needs a `ShellExecutor`.
+> See [Integrations](#Integrations) for pre-made ADB executors.
+
 ## 📦 Add Dependency
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.indidevs.android/shellom)](https://central.sonatype.com/artifact/com.indidevs.android/shellom)
@@ -120,3 +124,21 @@ val provider = InstrumentationShellProvider(..., runnerClass = "com.myapp.MyRunn
 ```
 
 ---
+
+## Integrations
+
+| Integration | Artifact |
+| :--- | :--- |
+| [ADBeesh](#ADBeesh) | `com.indidevs.android:adbeesh` |
+
+### [ADBeesh](https://gitlab.com/IndiDevs/adbeesh)
+
+```kotlin
+val session = pairing.openSession(timeoutMs = 5000)
+
+val executor = AdbeeshExecutor(
+    session = session,
+    elevationSatisfied = { provider.status.value == ShellStatus.READY },
+    tag = "AdbeeshExecutor"
+)
+```
