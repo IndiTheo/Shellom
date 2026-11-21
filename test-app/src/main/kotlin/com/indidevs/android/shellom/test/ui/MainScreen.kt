@@ -7,12 +7,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,10 +40,22 @@ import com.indidevs.android.adbeesh.notifications.NotificationFlowConfig
 import com.indidevs.android.adbeesh.pairing.AdbPairing
 import com.indidevs.android.adbeesh.pairing.AdbPairingWorkflow
 import com.indidevs.android.shellom.InstrumentationShellProvider
+import com.indidevs.android.shellom.ShellExecutor
 import com.indidevs.android.shellom.ShellStatus
 import com.indidevs.android.shellom.integrations.adbeesh.AdbeeshExecutor
+import com.indidevs.android.shellom.integrations.shizuku.ShizukuExecutor
 import com.indidevs.android.shellom.test.Constants
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import rikka.shizuku.Shizuku
+
+data class ShellProviderOption(
+    val id: String,
+    val name: String,
+    val prepare: suspend (Context) -> Result<Unit>,
+    val createExecutor: suspend (Context, CoroutineScope) -> ShellExecutor,
+    val cleanup: suspend (Context) -> Unit = {}
+)
 
 @Composable
 fun MainScreen(context: Context) {
@@ -50,8 +64,58 @@ fun MainScreen(context: Context) {
     val pairing = remember { AdbPairing.get(context, pairingId, AdbSessionConfig(pairingId)) }
     val pairingStatus by pairing.status.collectAsState()
 
+    val providers = remember {
+        listOf(
+            ShellProviderOption(
+                id = "adbeesh",
+                name = "ADBeesh (Wireless ADB)",
+                prepare = { ctx ->
+                    runCatching {
+                        val flowConfig = NotificationFlowConfig.Builder()
+                            .common { title = "Shellom Pairing" }
+                            .build()
+                        val workflow = AdbPairingWorkflow.Builder()
+                            .withCodeProvider(NotificationCodeProvider(ctx, flowConfig))
+                            .addCallback(NotificationCallback(ctx, flowConfig))
+                            .build()
+                        pairing.ensurePaired(workflow)
+                    }
+                },
+                createExecutor = { ctx, scope ->
+                    val session = pairing.openSession()
+                    AdbeeshExecutor(
+                        session = session,
+                        elevationSatisfied = { false }
+                    )
+                },
+                cleanup = { ctx ->
+                    pairing.unpair()
+                }
+            ),
+            ShellProviderOption(
+                id = "shizuku",
+                name = "Shizuku (IPC Daemon)",
+                prepare = { ctx ->
+                    runCatching {
+                        if (!Shizuku.pingBinder()) {
+                            throw IllegalStateException("Shizuku service is not available.")
+                        }
+                        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                            Shizuku.requestPermission(1001)
+                            throw SecurityException("Shizuku permission requested. Grant permission and retry.")
+                        }
+                    }
+                },
+                createExecutor = { _, _ ->
+                    ShizukuExecutor(autoRequestPermission = true)
+                }
+            )
+        )
+    }
+
+    var selectedProvider by remember { mutableStateOf(providers.first()) }
     var shellStatus by remember { mutableStateOf(ShellStatus.IDLE) }
-    var outputMessage by remember { mutableStateOf("Ready to pair and elevate.") }
+    var outputMessage by remember { mutableStateOf("Ready to prepare and elevate.") }
     var providerInstance by remember { mutableStateOf<InstrumentationShellProvider?>(null) }
 
     val pLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
@@ -69,54 +133,70 @@ fun MainScreen(context: Context) {
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text("Shellom! Test App", style = MaterialTheme.typography.headlineMedium)
-        Text("Pairing Status: ${pairingStatus.name}", style = MaterialTheme.typography.bodyLarge)
+
+        Text("Select Shell Provider:", style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            providers.forEach { provider ->
+                Button(
+                    onClick = { selectedProvider = provider },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (selectedProvider.id == provider.id)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.secondaryContainer
+                    )
+                ) {
+                    Text(provider.name.substringBefore(" "))
+                }
+            }
+        }
+
+        Text("Active Provider: ${selectedProvider.name}", style = MaterialTheme.typography.bodyLarge)
+        if (selectedProvider.id == "adbeesh") {
+            Text("Pairing Status: ${pairingStatus.name}", style = MaterialTheme.typography.bodyLarge)
+        }
         Text("Instrumentation Shell Status: ${shellStatus.name}", style = MaterialTheme.typography.bodyLarge)
 
         Button(
             onClick = {
                 scope.launch {
                     runCatching {
-                        val flowConfig = NotificationFlowConfig.Builder()
-                            .common { title = "Shellom Pairing" }
-                            .build()
-                        val workflow = AdbPairingWorkflow.Builder()
-                            .withCodeProvider(NotificationCodeProvider(context, flowConfig))
-                            .addCallback(NotificationCallback(context, flowConfig))
-                            .build()
-                        pairing.ensurePaired(workflow)
-                        outputMessage = "Paired successfully via Wireless ADB!"
-                    }.onFailure { outputMessage = "Pairing error: ${it.message}" }
+                        outputMessage = "Preparing provider '${selectedProvider.name}'..."
+                        selectedProvider.prepare(context).getOrThrow()
+                        outputMessage = "Provider '${selectedProvider.name}' prepared successfully!"
+                    }.onFailure {
+                        outputMessage = "Preparation note/error: ${it.message}"
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("1. Pair Device via Wireless ADB")
+            Text("Setup Executor")
         }
 
         Button(
             onClick = {
                 scope.launch {
                     runCatching {
-                        outputMessage = "Elevating process via ADB session..."
-                        pairing.openSession().use { session ->
-                            val adbeeshExecutor = AdbeeshExecutor(
-                                session = session,
-                                elevationSatisfied = { shellStatus == ShellStatus.READY }
+                        outputMessage = "Elevating process via ${selectedProvider.name}..."
+                        val executor = selectedProvider.createExecutor(context, scope)
+                        val provider = InstrumentationShellProvider(
+                            context = context,
+                            scope = scope,
+                            executor = executor,
+                            requiredPermissions = listOf(
+                                "android.permission.WRITE_SECURE_SETTINGS",
+                                "android.permission.DUMP"
                             )
-                            val provider = InstrumentationShellProvider(
-                                context = context,
-                                scope = scope,
-                                executor = adbeeshExecutor,
-                                requiredPermissions = listOf(
-                                    "android.permission.WRITE_SECURE_SETTINGS",
-                                    "android.permission.DUMP"
-                                )
-                            )
-                            providerInstance = provider
-                            provider.observeStatus(scope) { shellStatus = it }
-                            provider.awaitContext()
-                            outputMessage = "Elevation successful! Privileged context obtained (UID 2000)."
-                        }
+                        )
+                        providerInstance = provider
+                        provider.observeStatus(scope) { shellStatus = it }
+                        provider.awaitContext()
+                        outputMessage = "Elevation successful via ${selectedProvider.name}! Privileged context obtained (UID 2000)."
                     }.onFailure {
                         shellStatus = ShellStatus.ERROR
                         outputMessage = "Elevation failed: ${it.message}"
@@ -126,7 +206,7 @@ fun MainScreen(context: Context) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("2. Elevate Process via ADB Session")
+            Text("2. Elevate Process via the Selected Executor")
         }
 
         Button(
@@ -158,11 +238,10 @@ fun MainScreen(context: Context) {
             onClick = {
                 scope.launch {
                     runCatching {
-                        pairing.openSession().use { session ->
-                            session.shell("am force-stop com.indidevs.android.shellom.test")
-                        }
+                        val executor = selectedProvider.createExecutor(context, scope)
+                        executor.execute("am force-stop com.indidevs.android.shellom.test")
                     }.onFailure {
-                        Log.w(Constants.TAG, "Failed to kill test process via session", it)
+                        Log.w(Constants.TAG, "Failed to kill test process via executor", it)
                     }
                     shellStatus = ShellStatus.IDLE
                     providerInstance = null
@@ -176,12 +255,18 @@ fun MainScreen(context: Context) {
 
         Button(
             onClick = {
-                pairing.unpair()
-                outputMessage = "Device unpaired and credentials cleared."
+                scope.launch {
+                    runCatching {
+                        selectedProvider.cleanup(context)
+                        outputMessage = "Cleanup performed for ${selectedProvider.name}."
+                    }.onFailure {
+                        outputMessage = "Cleanup error: ${it.message}"
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("5. Unpair Device")
+            Text("Reset Executor")
         }
 
         if (outputMessage.isNotEmpty()) {
@@ -198,7 +283,7 @@ private fun Notice() {
     val annotatedString = buildAnnotatedString {
         append("This application is intended for internal end-to-end testing." +
                 "For library integration guides and source code, please visit: ")
-        pushStringAnnotation(tag = "URL", annotation = "https://gitlab.com/IndiDevs/shellom")
+                pushStringAnnotation(tag = "URL", annotation = "https://gitlab.com/IndiDevs/shellom")
         withStyle(
             style = SpanStyle(
                 color = MaterialTheme.colorScheme.onSurface,

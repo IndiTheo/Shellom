@@ -48,6 +48,10 @@ dependencies {
     // ADBeesh for wireless ADB pairing & transport
     implementation("com.indidevs.android:adbeesh:0.1.0-beta-2")
 
+    // Shizuku for IPC shell execution
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
+
     implementation("androidx.graphics:graphics-path:1.1.0")
     //noinspection Aligned16KB
     implementation("org.conscrypt:conscrypt-android:2.9.0")

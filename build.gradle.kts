@@ -58,6 +58,10 @@ dependencies {
     implementation("androidx.test:monitor:1.8.0")
     implementation("androidx.test:core:1.7.0")
     implementation("junit:junit:4.13.2")
+
+    // Integrations (Shizuku)
+    compileOnly("dev.rikka.shizuku:api:13.1.5")
+    compileOnly("dev.rikka.shizuku:provider:13.1.5")
 }
 
 val internalRepoUrl = project.findProperty("INTERNAL_REPO_URL")?.toString()

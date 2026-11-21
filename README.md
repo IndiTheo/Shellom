@@ -130,6 +130,7 @@ val provider = InstrumentationShellProvider(..., runnerClass = "com.myapp.MyRunn
 | Integration | Artifact |
 | :--- | :--- |
 | [ADBeesh](#ADBeesh) | `com.indidevs.android:adbeesh` |
+| [Shizuku](#Shizuku) | `dev.rikka.shizuku:api` |
 
 ### [ADBeesh](https://gitlab.com/IndiDevs/adbeesh)
 
@@ -140,5 +141,15 @@ val executor = AdbeeshExecutor(
     session = session,
     elevationSatisfied = { provider.status.value == ShellStatus.READY },
     tag = "AdbeeshExecutor"
+)
+```
+
+### [Shizuku](https://shizuku.rikka.app) - Compatible
+
+```kotlin
+val executor = ShizukuExecutor(
+    binderTimeoutMs = 5000L,
+    autoRequestPermission = true,
+    requestCode = 1001 // Permission request code supplied to Shizuku
 )
 ```
