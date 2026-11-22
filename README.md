@@ -7,20 +7,25 @@ Unlike implementations that spawn a separate app process, Shellom! utilizes an A
 to it to elevate the main process of the application to user 2000's identity.
 This way, it's possible to use privileged system service wrappers without any hassle:
 
-- No reflection
-- No AIDL communication
-- No manual switching of binder references
+- No reflection ✅
+- No manual AIDL communication, use managers directly ✅
+- No parcelization problems ✅
+- No manual swapping of binder references ✅
 
 Shellom! can be used to launch regular Android Services that can directly run privileged code, without the need to
 imitate headless AIDL services. Shellom! uses the [instrumentation testing framework](https://source.android.com/docs/core/tests/development/instrumentation) to adopt debugger permissions for the desired app.
+
+> [!WARNING]
+> Only one instrumented test is allowed to run in the system, so just one app can be elevated
+> using Shellom! at once. Let your users choose who gets this superpower!
 
 ## Requirements
 - **Android 12+ (API 31)**: Required for `--no-restart` instrumentation.
 - **ADB Connection**: Required to trigger the elevation command.
 
 > [!TIP]
-> Any ADB transport works as Shellom! only needs a `ShellExecutor`.
-> See [Integrations](#Integrations) for pre-made ADB executors.
+> Any ADB transport works as Shellom! only needs a [`ShellExecutor`](#get-shell-executor).
+> See [Integrations](#integrations) for supported elevation transports.
 
 ## 📦 Add Dependency
 
@@ -65,10 +70,12 @@ Register the `ShellRunner` in your manifest to handle the instrumentation proces
     android:targetPackage="your.package.id" />
 ```
 
-### Define Shell Executor
+### Get Shell Executor
 The `ShellExecutor` routes the elevation command through your ADB channel.
 
-**Simple connection:**
+> See [Integrations](#integrations) for ready ADB executors.
+
+**Define a custom executor:**
 ```kotlin
 val executor = ShellExecutor { cmd -> 
     myAdb.execute(cmd) // Must return Result<Unit>
@@ -127,10 +134,10 @@ val provider = InstrumentationShellProvider(..., runnerClass = "com.myapp.MyRunn
 
 ## Integrations
 
-| Integration | Artifact |
-| :--- | :--- |
-| [ADBeesh](#ADBeesh) | `com.indidevs.android:adbeesh` |
-| [Shizuku](#Shizuku) | `dev.rikka.shizuku:api` |
+| Integration                    | Artifact                       |
+|:-------------------------------|:-------------------------------|
+| [ADBeesh](#adbeesh)            | `com.indidevs.android:adbeesh` |
+| [Shizuku](#shizuku compatible) | `dev.rikka.shizuku:api`        |
 
 ### [ADBeesh](https://gitlab.com/IndiDevs/adbeesh)
 
@@ -144,7 +151,7 @@ val executor = AdbeeshExecutor(
 )
 ```
 
-### [Shizuku](https://shizuku.rikka.app) - Compatible
+### [Shizuku](https://shizuku.rikka.app) Compatible
 
 ```kotlin
 val executor = ShizukuExecutor(
