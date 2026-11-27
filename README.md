@@ -156,6 +156,44 @@ val executor = AdbeeshExecutor(
 
 ### [Shizuku](https://shizuku.rikka.app) Compatible
 
+> [!NOTE]
+> Shizuku is an optional `compileOnly` integration in Shellom!.
+Applications opting to use Shizuku must include Shizuku's dependencies and manifest entries in their own project.
+
+#### Add Shizuku Dependencies
+
+[![Maven Central](https://img.shields.io/maven-central/v/dev.rikka.shizuku/api?label=Shizuku%20API)](https://mvnrepository.com/artifact/dev.rikka.shizuku/api) [![Maven Central](https://img.shields.io/maven-central/v/dev.rikka.shizuku/provider?label=Shizuku%20Provider)](https://mvnrepository.com/artifact/dev.rikka.shizuku/provider)
+
+#### Target Application Manifest (`AndroidManifest.xml`)
+Add Shizuku's permission, package visibility query, protocol metadata, and IPC `ShizukuProvider` to your app's `AndroidManifest.xml`:
+
+```xml
+<!-- Shizuku API Permission -->
+<uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+<!-- Android 11+ Package Visibility Query -->
+<queries>
+    <package android:name="moe.shizuku.privileged.api" />
+</queries>
+
+<application>
+    <!-- Shizuku V3 Client Protocol Metadata -->
+    <meta-data
+        android:name="moe.shizuku.client.V3_SUPPORT"
+        android:value="true" />
+
+    <!-- Shizuku ContentProvider Handoff -->
+    <provider
+        android:name="rikka.shizuku.ShizukuProvider"
+        android:authorities="${applicationId}.shizuku"
+        android:exported="true"
+        android:multiprocess="false"
+        android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+</application>
+```
+
+#### Use Executor
+
 ```kotlin
 val executor = ShizukuExecutor(
     binderTimeoutMs = 5000L,
