@@ -117,10 +117,13 @@ provider.observeStatus(lifecycleScope) { status ->
 ```
 
 ### Reset
-To clear the cached privileged context and allow a fresh elevation attempt:
+To clear the cached privileged context and reset the status to `IDLE`:
 ```kotlin
 provider.reset()
 ```
+
+The shell identity itself is process-wide and `awaitContext()` returns the privileged context
+without triggering a new elevation. Resetting elevation is not supported yet.
 
 ---
 

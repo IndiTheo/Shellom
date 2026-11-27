@@ -79,10 +79,6 @@ abstract class AbstractShellProvider : ShellProvider {
             return it
         }
 
-        if (_status.value == ShellStatus.ERROR) {
-            reset()
-        }
-
         updateStatus(ShellStatus.ELEVATING)
 
         return try {

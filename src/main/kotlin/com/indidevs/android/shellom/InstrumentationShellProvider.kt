@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.test.platform.app.InstrumentationRegistry
 import com.indidevs.android.shellom.instrumentation.ShellIdentityElevator
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,19 +32,15 @@ class InstrumentationShellProvider(
     }
 
     override suspend fun performElevation(): Context {
-        if (!SignalReady.isReady.isCompleted) {
-            triggerElevation()
-        }
-
         Log.d(TAG, "Waiting for Shell readiness signal...")
-        SignalReady.isReady.await()
+        ElevationOrchestrator.awaitElevation { signal -> triggerElevation(signal) }
         Log.i(TAG, "Privileged context acquired via InstrumentationRegistry")
 
         return InstrumentationRegistry.getInstrumentation().context
     }
 
     override fun onReset() {
-        SignalReady.reset()
+        // Nothing to reset: the elevation state is process-wide and owned by ElevationOrchestrator
     }
 
     /**
@@ -67,7 +64,7 @@ class InstrumentationShellProvider(
         ).joinToString(" ")
     }
 
-    private fun triggerElevation() {
+    private fun triggerElevation(attempt: CompletableDeferred<Unit>) {
         val cmd = buildElevationCommand()
         Log.i(TAG, "Triggering elevation: $cmd")
 
@@ -75,7 +72,7 @@ class InstrumentationShellProvider(
             executor.execute(cmd).onFailure { e ->
                 Log.e(TAG, "Failed to execute elevation command", e)
                 updateStatus(ShellStatus.ERROR)
-                SignalReady.isReady.completeExceptionally(e)
+                ElevationOrchestrator.fail(attempt, e)
             }
         }
     }
