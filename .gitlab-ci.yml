@@ -71,6 +71,7 @@ lint_code:
 build_library:
   stage: build
   image: $CI_BASE_IMAGE
+  needs: []
   rules:
     - changes:
         - src/**/*
@@ -91,6 +92,7 @@ build_library:
 build_test_app:
   stage: build
   image: $CI_BASE_IMAGE
+  needs: []
   rules:
     - changes:
         - src/**/*
